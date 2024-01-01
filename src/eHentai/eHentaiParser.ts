@@ -130,7 +130,7 @@ export async function parseHomeSections(cheerio: CheerioAPI, requestManager: Req
         }
 
         if (section.id == 'latest_galleries') {
-            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_search=ewrwer')
+            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org')
             if ($ != null) {
                 section.items = parseMenuListPage($)
             }
