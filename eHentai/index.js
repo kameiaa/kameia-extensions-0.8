@@ -1457,7 +1457,6 @@ exports.eHentaiInfo = {
 class eHentai {
     constructor(cheerio) {
         this.cheerio = cheerio;
-        this.baseURL = 'https://e-hentai.org/';
         this.requestManager = App.createRequestManager({
             requestsPerSecond: 3,
             requestTimeout: 15000,
