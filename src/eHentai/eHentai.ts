@@ -48,7 +48,7 @@ export const eHentaiInfo: SourceInfo = {
         text: '18+',
         type: BadgeColor.YELLOW
     }],
-    intents: SourceIntents.HOMEPAGE_SECTIONS
+    intents: SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.MANGA_CHAPTERS
 }
 
 export class eHentai implements SearchResultsProviding, MangaProviding, ChapterProviding, HomePageSectionsProviding {
@@ -112,31 +112,6 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         const sections: HomeSection[] = [section_popular_recently, section_latest_galleries]
 
         await parseHomeSections(this.cheerio, this.requestManager, sections, sectionCallback)
-
-        // if (section_latest_galleries.items == null) {
-        //     console.log('latest galleries are null')
-        //     return
-        // }
-
-        // if (section_latest_galleries.items.length == 0) {
-        //     console.log('latest galleries are empty')
-        //     return
-        // }
-
-        // let tempid = section_latest_galleries.items[0]?.mangaId
-        // if (tempid == null) {
-        //     console.log('aborting, no id')
-        //     return
-        // }
-        // console.log('using manga id of ' + tempid)
-        // let chapters: Chapter[] = await this.getChapters(tempid)
-        // for (const chapter of chapters) {
-        //     console.log('chapter exists with id of ' + chapter.id)
-        //     let details = await this.getChapterDetails('1803120/eff7d824b7', chapter.id)
-        //     for (const page of details.pages) {
-        //         console.log('img link: ' + page)
-        //     }
-        // }
     }
 
     async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
@@ -184,10 +159,9 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
 
     async getChapters(mangaId: string): Promise<Chapter[]> {
         let data = (await getGalleryData([mangaId], this.requestManager))[0]
-        console.log(data)
         return [App.createChapter({
             id: data.filecount,
-            name: 'Chapter 1',
+            name: 'Gallery',
             chapNum: 1,
             time: new Date(parseInt(data.posted) * 1000),
             volume: 0,
