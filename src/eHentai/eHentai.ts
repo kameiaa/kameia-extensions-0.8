@@ -39,14 +39,14 @@ export const eHentaiInfo: SourceInfo = {
     version: '0.8.0',
     name: 'e-hentai',
     icon: 'icon.png',
-    author: 'kameia',
+    author: 'kameia, loik',
     description: 'Extension to grab galleries from E-Hentai',
     contentRating: ContentRating.ADULT,
     websiteBaseURL: 'https://e-hentai.org',
     authorWebsite: 'https://github.com/kameiaa',
     sourceTags: [{
         text: '18+',
-        type: BadgeColor.RED
+        type: BadgeColor.YELLOW
     }],
     intents: SourceIntents.HOMEPAGE_SECTIONS
 }
@@ -111,7 +111,32 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         const section_latest_galleries = App.createHomeSection({ id: 'latest_galleries', title: 'Latest Galleries', type: HomeSectionType.singleRowNormal, containsMoreItems: true })
         const sections: HomeSection[] = [section_popular_recently, section_latest_galleries]
 
-        parseHomeSections(this.cheerio, this.requestManager, sections, sectionCallback)
+        await parseHomeSections(this.cheerio, this.requestManager, sections, sectionCallback)
+
+        // if (section_latest_galleries.items == null) {
+        //     console.log('latest galleries are null')
+        //     return
+        // }
+
+        // if (section_latest_galleries.items.length == 0) {
+        //     console.log('latest galleries are empty')
+        //     return
+        // }
+
+        // let tempid = section_latest_galleries.items[0]?.mangaId
+        // if (tempid == null) {
+        //     console.log('aborting, no id')
+        //     return
+        // }
+        // console.log('using manga id of ' + tempid)
+        // let chapters: Chapter[] = await this.getChapters(tempid)
+        // for (const chapter of chapters) {
+        //     console.log('chapter exists with id of ' + chapter.id)
+        //     let details = await this.getChapterDetails('1803120/eff7d824b7', chapter.id)
+        //     for (const page of details.pages) {
+        //         console.log('img link: ' + page)
+        //     }
+        // }
     }
 
     async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
@@ -158,14 +183,15 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
     }
 
     async getChapters(mangaId: string): Promise<Chapter[]> {
-        const data = (await getGalleryData([mangaId], this.requestManager))[0]
-
+        let data = (await getGalleryData([mangaId], this.requestManager))[0]
+        console.log(data)
         return [App.createChapter({
             id: data.filecount,
+            name: 'Chapter 1',
             chapNum: 1,
-            langCode: parseLanguage(data.tags),
-            name: parseTitle(data.title),
-            time: new Date(parseInt(data.posted) * 1000)
+            time: new Date(parseInt(data.posted) * 1000),
+            volume: 0,
+            sortingIndex: 1
         })]
     }
 
@@ -182,7 +208,7 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         let stopSearch = metadata?.stopSearch ?? false
         if (stopSearch) {
             return App.createPagedResults({
-                results: [],
+                results: undefined,
                 metadata: {
                     stopSearch: true
                 }
@@ -199,6 +225,10 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
             categories = excludedCategories.map(tag => parseInt(tag.id.substring(9))).reduce((prev, cur) => prev + cur, 0)
         }
 
+        if (Number.isNaN(categories)) {
+            categories = 1023
+        }
+
         let nextPageId = { id: 0 }
         const results = await getSearchData(query.title, page, categories, this.requestManager, this.cheerio, nextPageId)
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
@@ -211,18 +241,6 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
             metadata: {
                 page: nextPageId.id ?? 0,
                 stopSearch: stopSearch
-            }
-        })
-    }
-
-    async getCloudflareBypassRequestAsync(): Promise<Request> {
-        return App.createRequest({
-            url: 'https://e-hentai.org',
-            method: 'GET',
-            headers: {
-                'referer': 'https://e-hentai.org/',
-                'origin': 'https://e-hentai.org/',
-                'user-agent': await this.requestManager.getDefaultUserAgent()
             }
         })
     }

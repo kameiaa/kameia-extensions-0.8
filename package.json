@@ -7,21 +7,22 @@
   "scripts": {
     "test" : "npx paperback test",
     "bundle": "paperback bundle",
-    "serve": "paperback serve"
+    "serve": "paperback serve",
+    "logcat": "paperback logcat --ip=192.168.1.1"
   },
   "author": "kameia, loik",
   "license": "MIT",
   "devDependencies": {
     "@types/cheerio": "0.22.21",
-    "@typescript-eslint/eslint-plugin": "^5.11.0",
-    "@typescript-eslint/parser": "^5.11.0",
-    "eslint": "^7.27.0",
-    "eslint-plugin-modules-newline": "^0.0.6",
-    "typescript": "^4.7.2"
+    "@typescript-eslint/eslint-plugin": "5.11.0",
+    "@typescript-eslint/parser": "5.11.0",
+    "eslint": "7.27.0",
+    "eslint-plugin-modules-newline": "0.0.6",
+    "typescript": "4.7.2"
   },
   "dependencies": {
     "@paperback/toolchain": "^0.8.0-alpha.47",
     "@paperback/types": "^0.8.0-alpha.47",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "1.0.0-rc.12"
   }
 }

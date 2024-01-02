@@ -43,14 +43,6 @@ async function getImage(url: string, requestManager: RequestManager, cheerio: Ch
 
     const data = await requestManager.schedule(request, 1)
     const $ = cheerio.load(data.data as string)
-    let parts = $('#img').attr('src')?.split("/");
-
-    if (parts == null) {
-        return ''
-    }
-    else if (parts[parts.length - 1] == 'gif') {
-        return ''
-    }
 
     return $('#img').attr('src') ?? ''
 }
@@ -135,7 +127,7 @@ export async function parseHomeSections(cheerio: CheerioAPI, requestManager: Req
                 section.items = parseMenuListPage($)
             }
         }
-        
+
         if ($ == null) {
             section.items = [App.createPartialSourceManga({
                 mangaId: 'stopSearch',
@@ -162,9 +154,10 @@ export function parseMenuListPage($: CheerioStatic, ignoreExpectedEntryAmount: b
         let details = { id, title, image, subtitle }
         getRowDetails($, manga, details);
 
-        if (details.id.length == 0 || details.id == null || details.title.length == 0 || details.title == null) {
+        if (details.id.length == 0 || details.title.length == 0) {
             continue
         }
+
         ret.push(App.createPartialSourceManga({
             mangaId: details.id,
             image: details.image,

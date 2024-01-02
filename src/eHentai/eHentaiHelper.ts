@@ -6,6 +6,12 @@ import {
 import { UrlInfo, parseMenuListPage, parseUrlParams } from './eHentaiParser'
 
 export async function getGalleryData(ids: string[], requestManager: RequestManager): Promise<any> {
+    let resulting = ids.map(id => id.split('/'))
+    for (const result of resulting) {
+        for (const result1 of result) {
+            console.log(result1)
+        }
+    }
     const request = App.createRequest({
         url: 'https://api.e-hentai.org/api.php',
         method: 'POST',
@@ -21,7 +27,7 @@ export async function getGalleryData(ids: string[], requestManager: RequestManag
 
     const data = await requestManager.schedule(request, 1)
     const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data
-    return json.gmetadata
+    return await json.gmetadata
 }
 
 export async function getSearchData(query: string | undefined, page: number, categories: number, requestManager: RequestManager, cheerio: CheerioAPI, nextPageId: { id: number }): Promise<PartialSourceManga[]> {
