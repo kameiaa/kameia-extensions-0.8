@@ -1,1 +1,1 @@
-# Fork of Paperback Sources
+Currently only contains an e-hentai extension

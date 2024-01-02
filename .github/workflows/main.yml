@@ -36,3 +36,5 @@ jobs:
           BRANCH: gh-pages
           FOLDER: bundles
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: https://github.com/kameiaa/kameia-extensions/tree/gh-pages
+          baseURL: https://e-hentai.org
