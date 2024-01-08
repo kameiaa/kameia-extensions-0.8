@@ -1465,7 +1465,7 @@ class eHentai {
                     request.headers = {
                         ...(request.headers ?? {}),
                         ...{
-                            'user-agent': await this.requestManager.getDefaultUserAgent(),
+                            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 12_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
                             'referer': 'https://e-hentai.org/'
                         }
                     };
