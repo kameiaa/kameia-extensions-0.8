@@ -35,8 +35,13 @@ import {
     parseHomeSections
 } from './eHentaiParser'
 
+const PAPERBACK_VERSION = '0.8.0'
+export const getExportVersion = (EXTENSION_VERSION: string): string => {
+    return PAPERBACK_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.')
+}
+
 export const eHentaiInfo: SourceInfo = {
-    version: '0.8.0',
+    version: getExportVersion('0.0.1'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -159,21 +164,41 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
 
     async getChapters(mangaId: string): Promise<Chapter[]> {
         let data = (await getGalleryData([mangaId], this.requestManager))[0]
-        return [App.createChapter({
-            id: data.filecount,
-            name: 'Gallery',
-            chapNum: 1,
+        const chapters: Chapter[] = []
+        const chaptersLoopNum: number = Math.ceil(data.filecount / 40)
+
+        // Push entire gallery first, then split gallery
+        chapters.push(App.createChapter({
+            id: 'Full-' + data.filecount,
+            name: 'Gallery (Warning - loading time grows with more pages)',
+            chapNum: chaptersLoopNum + 1,
             time: new Date(parseInt(data.posted) * 1000),
             volume: 0,
-            sortingIndex: 1
-        })]
+            sortingIndex: chaptersLoopNum
+        }))
+
+        for (let i: number = 0; i < chaptersLoopNum; ++i) {
+            let startPage: number = ((i * 40) + 1)
+            let endPage: number = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * 40)
+            const websitePageNum: number = i
+            chapters.push(App.createChapter({
+                id: 'Pages-' + websitePageNum,
+                name: 'Page ' + startPage + ' - ' + endPage,
+                chapNum: i + 1,
+                time: new Date(parseInt(data.posted) * 1000),
+                volume: 0,
+                sortingIndex: i
+            }))
+        }
+
+        return chapters
     }
 
     async getChapterDetails(mangaId: string, chapterId: string): Promise<ChapterDetails> {
         return App.createChapterDetails({
-            id: chapterId,
             mangaId: mangaId,
-            pages: await parsePages(mangaId, parseInt(chapterId), this.requestManager, this.cheerio)
+            id: chapterId,
+            pages: await parsePages(mangaId, chapterId, this.requestManager, this.cheerio)
         })
     }
 

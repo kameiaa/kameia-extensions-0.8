@@ -59,21 +59,36 @@ export async function parsePage(id: string, page: number, requestManager: Reques
     const pageArr = []
     const pageDivArr = $('div.gdtm').toArray()
 
-    for (const page of pageDivArr) {
-        pageArr.push(getImage($('a', page).attr('href') ?? '', requestManager, cheerio))
+    for (const pageDiv of pageDivArr) {
+        pageArr.push(getImage($('a', pageDiv).attr('href') ?? '', requestManager, cheerio))
     }
 
     return Promise.all(pageArr)
 }
 
-export async function parsePages(id: string, pageCount: number, requestManager: RequestManager, cheerio: CheerioAPI): Promise<string[]> {
-    const pageArr = []
+export async function parsePages(mangaId: string, pageCount: string, requestManager: RequestManager, cheerio: CheerioAPI): Promise<string[]> {
+    const splitPageCount: string[] = pageCount.split('-')
 
-    for (let i = 0; i <= pageCount / 40; i++) {
-        pageArr.push(parsePage(id, i, requestManager, cheerio))
+    if ((splitPageCount[0] ?? '0') == 'Full') {
+        if (splitPageCount.length != 2) {
+            return []
+        }
+
+        const pages: number = parseInt(splitPageCount[1] ?? '0')
+        const pagesArr = []
+        for (let i = 0; i <= pages / 40; i++) {
+            pagesArr.push(parsePage(mangaId, i, requestManager, cheerio))
+        }
+        return Promise.all(pagesArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []))
+    } else if ((splitPageCount[0] ?? '0') == 'Pages') {
+        if (splitPageCount.length != 2) {
+            return []
+        }
+        const websitePageNum: number = parseInt(splitPageCount[1] ?? '0')
+        return parsePage(mangaId, websitePageNum, requestManager, cheerio)
     }
 
-    return Promise.all(pageArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []))
+    return []
 }
 
 const namespaceHasTags = (namespace: string, tags: string[]): boolean => { return tags.filter(tag => tag.startsWith(`${namespace}:`)).length != 0 }
