@@ -1435,12 +1435,17 @@ Object.defineProperty(exports, "decodeXMLStrict", { enumerable: true, get: funct
 },{"./decode.js":62,"./encode.js":64,"./escape.js":65}],70:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.eHentai = exports.eHentaiInfo = void 0;
+exports.eHentai = exports.eHentaiInfo = exports.getExportVersion = void 0;
 const types_1 = require("@paperback/types");
 const eHentaiHelper_1 = require("./eHentaiHelper");
 const eHentaiParser_1 = require("./eHentaiParser");
+const PAPERBACK_VERSION = '0.8.0';
+const getExportVersion = (EXTENSION_VERSION) => {
+    return PAPERBACK_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.');
+};
+exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: '0.8.0',
+    version: (0, exports.getExportVersion)('0.0.1'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1550,20 +1555,37 @@ class eHentai {
     }
     async getChapters(mangaId) {
         let data = (await (0, eHentaiHelper_1.getGalleryData)([mangaId], this.requestManager))[0];
-        return [App.createChapter({
-                id: data.filecount,
-                name: 'Gallery',
-                chapNum: 1,
+        const chapters = [];
+        const chaptersLoopNum = Math.ceil(data.filecount / 40);
+        // Push entire gallery first, then split gallery
+        chapters.push(App.createChapter({
+            id: 'Full-' + data.filecount,
+            name: 'Gallery (Warning - loading time grows with more pages)',
+            chapNum: chaptersLoopNum + 1,
+            time: new Date(parseInt(data.posted) * 1000),
+            volume: 0,
+            sortingIndex: chaptersLoopNum
+        }));
+        for (let i = 0; i < chaptersLoopNum; ++i) {
+            let startPage = ((i * 40) + 1);
+            let endPage = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * 40);
+            const websitePageNum = i;
+            chapters.push(App.createChapter({
+                id: 'Pages-' + websitePageNum,
+                name: 'Page ' + startPage + ' - ' + endPage,
+                chapNum: i + 1,
                 time: new Date(parseInt(data.posted) * 1000),
                 volume: 0,
-                sortingIndex: 1
-            })];
+                sortingIndex: i
+            }));
+        }
+        return chapters;
     }
     async getChapterDetails(mangaId, chapterId) {
         return App.createChapterDetails({
-            id: chapterId,
             mangaId: mangaId,
-            pages: await (0, eHentaiParser_1.parsePages)(mangaId, parseInt(chapterId), this.requestManager, this.cheerio)
+            id: chapterId,
+            pages: await (0, eHentaiParser_1.parsePages)(mangaId, chapterId, this.requestManager, this.cheerio)
         });
     }
     async getSearchResults(query, metadata) {
@@ -1709,18 +1731,33 @@ async function parsePage(id, page, requestManager, cheerio) {
     const $ = cheerio.load(response.data);
     const pageArr = [];
     const pageDivArr = $('div.gdtm').toArray();
-    for (const page of pageDivArr) {
-        pageArr.push(getImage($('a', page).attr('href') ?? '', requestManager, cheerio));
+    for (const pageDiv of pageDivArr) {
+        pageArr.push(getImage($('a', pageDiv).attr('href') ?? '', requestManager, cheerio));
     }
     return Promise.all(pageArr);
 }
 exports.parsePage = parsePage;
-async function parsePages(id, pageCount, requestManager, cheerio) {
-    const pageArr = [];
-    for (let i = 0; i <= pageCount / 40; i++) {
-        pageArr.push(parsePage(id, i, requestManager, cheerio));
+async function parsePages(mangaId, pageCount, requestManager, cheerio) {
+    const splitPageCount = pageCount.split('-');
+    if ((splitPageCount[0] ?? '0') == 'Full') {
+        if (splitPageCount.length != 2) {
+            return [];
+        }
+        const pages = parseInt(splitPageCount[1] ?? '0');
+        const pagesArr = [];
+        for (let i = 0; i <= pages / 40; i++) {
+            pagesArr.push(parsePage(mangaId, i, requestManager, cheerio));
+        }
+        return Promise.all(pagesArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []));
     }
-    return Promise.all(pageArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []));
+    else if ((splitPageCount[0] ?? '0') == 'Pages') {
+        if (splitPageCount.length != 2) {
+            return [];
+        }
+        const websitePageNum = parseInt(splitPageCount[1] ?? '0');
+        return parsePage(mangaId, websitePageNum, requestManager, cheerio);
+    }
+    return [];
 }
 exports.parsePages = parsePages;
 const namespaceHasTags = (namespace, tags) => { return tags.filter(tag => tag.startsWith(`${namespace}:`)).length != 0; };
