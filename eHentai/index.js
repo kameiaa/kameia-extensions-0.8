@@ -1439,13 +1439,14 @@ exports.eHentai = exports.eHentaiInfo = exports.getExportVersion = void 0;
 const types_1 = require("@paperback/types");
 const eHentaiHelper_1 = require("./eHentaiHelper");
 const eHentaiParser_1 = require("./eHentaiParser");
+const eHentaiSettings_1 = require("./eHentaiSettings");
 const PAPERBACK_VERSION = '0.8.0';
 const getExportVersion = (EXTENSION_VERSION) => {
     return PAPERBACK_VERSION.split('.').map((x, index) => Number(x) + Number(EXTENSION_VERSION.split('.')[index])).join('.');
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.1'),
+    version: (0, exports.getExportVersion)('0.0.2'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1457,7 +1458,7 @@ exports.eHentaiInfo = {
             text: '18+',
             type: types_1.BadgeColor.YELLOW
         }],
-    intents: types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.MANGA_CHAPTERS
+    intents: types_1.SourceIntents.HOMEPAGE_SECTIONS | types_1.SourceIntents.MANGA_CHAPTERS | types_1.SourceIntents.SETTINGS_UI
 };
 class eHentai {
     constructor(cheerio) {
@@ -1494,9 +1495,9 @@ class eHentai {
                 App.createTag({ id: 'category:4', label: 'Manga' }),
                 App.createTag({ id: 'category:8', label: 'Artist CG' }),
                 App.createTag({ id: 'category:16', label: 'Game CG' }),
+                App.createTag({ id: 'category:512', label: 'Western' }),
                 App.createTag({ id: 'category:256', label: 'Non-H' }),
                 App.createTag({ id: 'category:32', label: 'Image Set' }),
-                App.createTag({ id: 'category:512', label: 'Western' }),
                 App.createTag({ id: 'category:64', label: 'Cosplay' }),
                 App.createTag({ id: 'category:128', label: 'Asian Porn' }),
                 App.createTag({ id: 'category:1', label: 'Misc' })
@@ -1512,7 +1513,7 @@ class eHentai {
         const section_popular_recently = App.createHomeSection({ id: 'popular_recently', title: 'Popular Recently', type: types_1.HomeSectionType.singleRowNormal, containsMoreItems: false });
         const section_latest_galleries = App.createHomeSection({ id: 'latest_galleries', title: 'Latest Galleries', type: types_1.HomeSectionType.singleRowNormal, containsMoreItems: true });
         const sections = [section_popular_recently, section_latest_galleries];
-        await (0, eHentaiParser_1.parseHomeSections)(this.cheerio, this.requestManager, sections, sectionCallback);
+        await (0, eHentaiParser_1.parseHomeSections)(this.cheerio, this.requestManager, sections, sectionCallback, this.stateManager);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
         const page = metadata?.page ?? 0;
@@ -1525,7 +1526,7 @@ class eHentai {
                 }
             });
         let nextPageId = { id: 0 };
-        const results = await (0, eHentaiHelper_1.getSearchData)('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId);
+        const results = await (0, eHentaiHelper_1.getSearchData)('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId, this.stateManager);
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop();
             stopSearch = true;
@@ -1603,16 +1604,40 @@ class eHentai {
         const excludedCategories = query.excludedTags?.filter(tag => tag.id.startsWith('category:'));
         let categories = 0;
         if (includedCategories != undefined && includedCategories.length != 0) {
-            categories = includedCategories.map(tag => parseInt(tag.id.substring(9))).reduce((prev, cur) => prev - cur, 1023);
+            let includedCategoriesNum = includedCategories.map(tag => parseInt(tag.id.substring(9)));
+            for (let includedCategoryNum of includedCategoriesNum) {
+                if (await (0, eHentaiHelper_1.isCategoryHidden)(includedCategoryNum, this.stateManager)) {
+                    includedCategoriesNum.splice(includedCategoriesNum.indexOf(includedCategoryNum), 1);
+                }
+            }
+            categories = includedCategoriesNum.reduce((prev, cur) => prev - cur, 1023);
+            if (categories == 1023) {
+                categories = (await (0, eHentaiSettings_1.getDisplayedCategories)(this.stateManager)).reduce((prev, cur) => prev - cur, 1023);
+            }
         }
         else if (excludedCategories != undefined && excludedCategories.length != 0) {
-            categories = excludedCategories.map(tag => parseInt(tag.id.substring(9))).reduce((prev, cur) => prev + cur, 0);
+            let excludedCategoriesNum = excludedCategories.map(tag => parseInt(tag.id.substring(9)));
+            for (let i = excludedCategoriesNum.length - 1; i >= 0; --i) {
+                let excludedCategoryNum = excludedCategoriesNum[i] ?? -1;
+                if (excludedCategoryNum == -1) {
+                    continue;
+                }
+                if (await (0, eHentaiHelper_1.isCategoryHidden)(excludedCategoryNum, this.stateManager)) {
+                    excludedCategoriesNum.splice(excludedCategoriesNum.indexOf(excludedCategoryNum), 1);
+                }
+            }
+            let stateManagerHiddenCategories = await (0, eHentaiSettings_1.getDisplayedCategories)(this.stateManager);
+            excludedCategoriesNum.push(stateManagerHiddenCategories.reduce((prev, cur) => prev - cur, 1023));
+            categories = excludedCategoriesNum.reduce((prev, cur) => prev + cur, 0);
         }
-        if (Number.isNaN(categories)) {
-            categories = 1023;
+        else {
+            categories = (await (0, eHentaiSettings_1.getDisplayedCategories)(this.stateManager)).reduce((prev, cur) => prev - cur, 1023);
+        }
+        if (Number.isNaN(categories) || categories == 1023) {
+            categories = 0;
         }
         let nextPageId = { id: 0 };
-        const results = await (0, eHentaiHelper_1.getSearchData)(query.title, page, categories, this.requestManager, this.cheerio, nextPageId);
+        const results = await (0, eHentaiHelper_1.getSearchData)(query.title, page, categories, this.requestManager, this.cheerio, nextPageId, this.stateManager);
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop();
             stopSearch = true;
@@ -1625,14 +1650,26 @@ class eHentai {
             }
         });
     }
+    async getSourceMenu() {
+        return Promise.resolve(App.createDUISection({
+            id: 'main',
+            header: 'Source Settings',
+            rows: () => Promise.resolve([
+                (0, eHentaiSettings_1.settings)(this.stateManager),
+                (0, eHentaiSettings_1.resetSettings)(this.stateManager)
+            ]),
+            isHidden: false
+        }));
+    }
 }
 exports.eHentai = eHentai;
 
-},{"./eHentaiHelper":71,"./eHentaiParser":72,"@paperback/types":61}],71:[function(require,module,exports){
+},{"./eHentaiHelper":71,"./eHentaiParser":72,"./eHentaiSettings":73,"@paperback/types":61}],71:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.idCleaner = exports.getRowDetails = exports.getSearchData = exports.getGalleryData = void 0;
+exports.eHentaiCategoriesList = exports.isCategoryHidden = exports.idCleaner = exports.getRowDetails = exports.getSearchData = exports.getGalleryData = void 0;
 const eHentaiParser_1 = require("./eHentaiParser");
+const eHentaiSettings_1 = require("./eHentaiSettings");
 async function getGalleryData(ids, requestManager) {
     const request = App.createRequest({
         url: 'https://api.e-hentai.org/api.php',
@@ -1651,9 +1688,10 @@ async function getGalleryData(ids, requestManager) {
     return json.gmetadata;
 }
 exports.getGalleryData = getGalleryData;
-async function getSearchData(query, page, categories, requestManager, cheerio, nextPageId) {
+async function getSearchData(query, page, categories, requestManager, cheerio, nextPageId, sourceStateManager) {
+    let finalQuery = (query ?? '') + ' ' + await (0, eHentaiSettings_1.getExtraArgs)(sourceStateManager);
     const request = App.createRequest({
-        url: `https://e-hentai.org/?next=${page}&f_cats=${categories}&f_search=${encodeURIComponent(query ?? '')}`,
+        url: `https://e-hentai.org/?next=${page}&f_cats=${categories}&f_search=${encodeURIComponent(finalQuery)}`,
         method: 'GET'
     });
     const result = await requestManager.schedule(request, 1);
@@ -1686,13 +1724,72 @@ function idCleaner(str) {
     return `${splitUrlContents[4]}/${splitUrlContents[5]}`;
 }
 exports.idCleaner = idCleaner;
+async function isCategoryHidden(category, sourceStateManager) {
+    const displayedCategories = await (0, eHentaiSettings_1.getDisplayedCategories)(sourceStateManager);
+    return displayedCategories.filter((displayedCategory) => displayedCategory == category).length == 0;
+}
+exports.isCategoryHidden = isCategoryHidden;
+class eHentaiCategories {
+    constructor() {
+        this.Categories = [
+            {
+                name: "Doujinshi",
+                value: '2'
+            },
+            {
+                name: "Manga",
+                value: '4'
+            },
+            {
+                name: "Artist CG",
+                value: '8'
+            },
+            {
+                name: "Game CG",
+                value: '16'
+            },
+            {
+                name: "Western",
+                value: '512'
+            },
+            {
+                name: "Non-H",
+                value: '256'
+            },
+            {
+                name: "Image Set",
+                value: '32'
+            },
+            {
+                name: "Cosplay",
+                value: '64'
+            },
+            {
+                name: "Asian Porn",
+                value: '128'
+            },
+            {
+                name: "Misc",
+                value: '1'
+            }
+        ];
+    }
+    getName(categoryValue) {
+        return (this.Categories.filter((category) => category.value == categoryValue)[0]?.name ?? '');
+    }
+    getValueList() {
+        return this.Categories.map((category) => category.value);
+    }
+}
+exports.eHentaiCategoriesList = new eHentaiCategories();
 
-},{"./eHentaiParser":72}],72:[function(require,module,exports){
+},{"./eHentaiParser":72,"./eHentaiSettings":73}],72:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseUrlParams = exports.parseMenuListPage = exports.parseHomeSections = exports.parseTitle = exports.parseTags = exports.parsePages = exports.parsePage = exports.parseLanguage = exports.parseArtist = void 0;
-const eHentaiHelper_1 = require("./eHentaiHelper");
 const entities = require("entities");
+const eHentaiHelper_1 = require("./eHentaiHelper");
+const eHentaiSettings_1 = require("./eHentaiSettings");
 const parseArtist = (tags) => {
     const artist = tags.filter(tag => tag.startsWith('artist:')).map(tag => tag.substring(7));
     const cosplayer = tags.filter(tag => tag.startsWith('cosplayer:')).map(tag => tag.substring(10));
@@ -1815,7 +1912,7 @@ const parseTitle = (title) => {
     return title.replaceAll(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
 };
 exports.parseTitle = parseTitle;
-async function parseHomeSections(cheerio, requestManager, sections, sectionCallback) {
+async function parseHomeSections(cheerio, requestManager, sections, sectionCallback, sourceStateManager) {
     for (const section of sections) {
         let $ = undefined;
         if (section.id == 'popular_recently') {
@@ -1825,7 +1922,7 @@ async function parseHomeSections(cheerio, requestManager, sections, sectionCallb
             }
         }
         if (section.id == 'latest_galleries') {
-            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org');
+            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_search=' + encodeURIComponent(await (0, eHentaiSettings_1.getExtraArgs)(sourceStateManager)));
             if ($ != null) {
                 section.items = parseMenuListPage($);
             }
@@ -1905,5 +2002,84 @@ function parseUrlParams(url) {
 }
 exports.parseUrlParams = parseUrlParams;
 
-},{"./eHentaiHelper":71,"entities":69}]},{},[70])(70)
+},{"./eHentaiHelper":71,"./eHentaiSettings":73,"entities":69}],73:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resetSettings = exports.settings = exports.getDisplayedCategoriesStr = exports.getDisplayedCategories = exports.getExtraArgs = void 0;
+const eHentaiHelper_1 = require("./eHentaiHelper");
+async function getExtraArgs(stateManager) {
+    return await stateManager.retrieve('extra_args') ?? '';
+}
+exports.getExtraArgs = getExtraArgs;
+async function getDisplayedCategories(stateManager) {
+    return await (await getDisplayedCategoriesStr(stateManager)).map((valueStr) => parseInt(valueStr));
+}
+exports.getDisplayedCategories = getDisplayedCategories;
+async function getDisplayedCategoriesStr(stateManager) {
+    return await stateManager.retrieve('displayed_categories') ?? eHentaiHelper_1.eHentaiCategoriesList.getValueList();
+}
+exports.getDisplayedCategoriesStr = getDisplayedCategoriesStr;
+const settings = (stateManager) => {
+    return App.createDUINavigationButton({
+        id: 'settings',
+        label: 'Content Settings',
+        form: App.createDUIForm({
+            sections: () => {
+                return Promise.resolve([
+                    App.createDUISection({
+                        id: 'general',
+                        header: 'General',
+                        footer: 'Affects \'Latest Galleries\' homepage section and search results.\nHidden categories will override their respective category option in search arguments.',
+                        rows: async () => {
+                            await Promise.all([
+                                getExtraArgs(stateManager)
+                            ]);
+                            return await [
+                                App.createDUIInputField({
+                                    id: 'extra_args',
+                                    label: 'Additional filter arguments',
+                                    value: App.createDUIBinding({
+                                        get: async () => getExtraArgs(stateManager),
+                                        set: async (newValue) => {
+                                            await stateManager.store('extra_args', newValue);
+                                        }
+                                    })
+                                }),
+                                App.createDUISelect({
+                                    id: 'displayed_categories',
+                                    label: 'Displayed Categories',
+                                    options: eHentaiHelper_1.eHentaiCategoriesList.getValueList(),
+                                    labelResolver: async (option) => eHentaiHelper_1.eHentaiCategoriesList.getName(option),
+                                    value: App.createDUIBinding({
+                                        get: async () => getDisplayedCategoriesStr(stateManager),
+                                        set: async (newValue) => {
+                                            await stateManager.store('displayed_categories', newValue);
+                                        }
+                                    }),
+                                    allowsMultiselect: true
+                                })
+                            ];
+                        },
+                        isHidden: false
+                    })
+                ]);
+            }
+        })
+    });
+};
+exports.settings = settings;
+const resetSettings = (stateManager) => {
+    return App.createDUIButton({
+        id: 'reset',
+        label: 'Reset Settings',
+        onTap: async () => {
+            await Promise.all([
+                stateManager.store('extra_args', null)
+            ]);
+        }
+    });
+};
+exports.resetSettings = resetSettings;
+
+},{"./eHentaiHelper":71}]},{},[70])(70)
 });
