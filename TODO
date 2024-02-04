@@ -10,9 +10,9 @@ Bugs:
     Nothing can be done except for workaround using VPN (USA works)
 
 Features:
-* Persistent search arguments
+✔ Persistent search arguments
     Reference MangaDex/nhentai
     SourceStateManager
 
-    Get additional search args to work first ✔, then
-    DUISelect for toggling displayed categories, wil override the respective search category arg
+    Get additional search args to work first, then
+    DUISelect for toggling displayed categories, will override the respective search category arg
