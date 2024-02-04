@@ -13,6 +13,7 @@ import {
 } from './eHentaiHelper'
 
 import {
+    getDisplayedCategories,
     getExtraArgs
 } from './eHentaiSettings'
 
@@ -142,7 +143,9 @@ export async function parseHomeSections(cheerio: CheerioAPI, requestManager: Req
         }
 
         if (section.id == 'latest_galleries') {
-            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_search=' + encodeURIComponent(await getExtraArgs(sourceStateManager)))
+            const displayedCategories: number[] = await getDisplayedCategories(sourceStateManager)
+            const excludedCategories: number = displayedCategories.reduce((prev, cur) => prev - cur, 1023)
+            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_cats=' + excludedCategories + '&f_search=' + encodeURIComponent(await getExtraArgs(sourceStateManager)))
             if ($ != null) {
                 section.items = parseMenuListPage($)
             }

@@ -49,7 +49,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.2'),
+    version: getExportVersion('0.0.3'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -138,7 +138,9 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         })
 
         let nextPageId = { id: 0 }
-        const results = await getSearchData('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId, this.stateManager)
+        const displayedCategories: number[] = await getDisplayedCategories(this.stateManager)
+        const excludedCategories: number = displayedCategories.reduce((prev, cur) => prev - cur, 1023)
+        const results = await getSearchData('', page, excludedCategories, this.requestManager, this.cheerio, nextPageId, this.stateManager)
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop()
             stopSearch = true
