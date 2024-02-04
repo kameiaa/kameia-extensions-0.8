@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.2'),
+    version: (0, exports.getExportVersion)('0.0.3'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1526,7 +1526,9 @@ class eHentai {
                 }
             });
         let nextPageId = { id: 0 };
-        const results = await (0, eHentaiHelper_1.getSearchData)('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId, this.stateManager);
+        const displayedCategories = await (0, eHentaiSettings_1.getDisplayedCategories)(this.stateManager);
+        const excludedCategories = displayedCategories.reduce((prev, cur) => prev - cur, 1023);
+        const results = await (0, eHentaiHelper_1.getSearchData)('', page, excludedCategories, this.requestManager, this.cheerio, nextPageId, this.stateManager);
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop();
             stopSearch = true;
@@ -1922,7 +1924,9 @@ async function parseHomeSections(cheerio, requestManager, sections, sectionCallb
             }
         }
         if (section.id == 'latest_galleries') {
-            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_search=' + encodeURIComponent(await (0, eHentaiSettings_1.getExtraArgs)(sourceStateManager)));
+            const displayedCategories = await (0, eHentaiSettings_1.getDisplayedCategories)(sourceStateManager);
+            const excludedCategories = displayedCategories.reduce((prev, cur) => prev - cur, 1023);
+            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_cats=' + excludedCategories + '&f_search=' + encodeURIComponent(await (0, eHentaiSettings_1.getExtraArgs)(sourceStateManager)));
             if ($ != null) {
                 section.items = parseMenuListPage($);
             }
