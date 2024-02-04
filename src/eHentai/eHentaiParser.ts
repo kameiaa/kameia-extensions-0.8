@@ -2,14 +2,19 @@ import {
     HomeSection,
     PartialSourceManga,
     RequestManager,
+    SourceStateManager,
     TagSection
 } from '@paperback/types'
+
+import entities = require('entities')
 
 import {
     getRowDetails
 } from './eHentaiHelper'
 
-import entities = require('entities')
+import {
+    getExtraArgs
+} from './eHentaiSettings'
 
 export const parseArtist = (tags: string[]): string | undefined => {
     const artist = tags.filter(tag => tag.startsWith('artist:')).map(tag => tag.substring(7))
@@ -125,7 +130,7 @@ export const parseTitle = (title: string): string => {
     return title.replaceAll(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
 }
 
-export async function parseHomeSections(cheerio: CheerioAPI, requestManager: RequestManager, sections: HomeSection[], sectionCallback: (section: HomeSection) => void): Promise<void> {
+export async function parseHomeSections(cheerio: CheerioAPI, requestManager: RequestManager, sections: HomeSection[], sectionCallback: (section: HomeSection) => void, sourceStateManager: SourceStateManager): Promise<void> {
     for (const section of sections) {
         let $: CheerioStatic | undefined = undefined
 
@@ -137,7 +142,7 @@ export async function parseHomeSections(cheerio: CheerioAPI, requestManager: Req
         }
 
         if (section.id == 'latest_galleries') {
-            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org')
+            $ = await getCheerioStatic(cheerio, requestManager, 'https://e-hentai.org/?f_search=' + encodeURIComponent(await getExtraArgs(sourceStateManager)))
             if ($ != null) {
                 section.items = parseMenuListPage($)
             }

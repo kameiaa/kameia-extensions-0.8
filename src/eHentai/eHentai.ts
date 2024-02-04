@@ -4,6 +4,7 @@ import {
     ChapterDetails,
     ChapterProviding,
     ContentRating,
+    DUISection,
     HomePageSectionsProviding,
     HomeSectionType,
     HomeSection,
@@ -23,17 +24,24 @@ import {
 
 import {
     getGalleryData,
-    getSearchData
+    getSearchData,
+    isCategoryHidden
 } from './eHentaiHelper'
 
 import {
     parseArtist,
+    parseHomeSections,
     parseLanguage,
     parsePages,
     parseTags,
-    parseTitle,
-    parseHomeSections
+    parseTitle
 } from './eHentaiParser'
+
+import {
+    getDisplayedCategories,
+    settings,
+    resetSettings
+} from './eHentaiSettings'
 
 const PAPERBACK_VERSION = '0.8.0'
 export const getExportVersion = (EXTENSION_VERSION: string): string => {
@@ -41,7 +49,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.1'),
+    version: getExportVersion('0.0.2'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -53,7 +61,7 @@ export const eHentaiInfo: SourceInfo = {
         text: '18+',
         type: BadgeColor.YELLOW
     }],
-    intents: SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.MANGA_CHAPTERS
+    intents: SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.MANGA_CHAPTERS | SourceIntents.SETTINGS_UI
 }
 
 export class eHentai implements SearchResultsProviding, MangaProviding, ChapterProviding, HomePageSectionsProviding {
@@ -95,9 +103,9 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
                 App.createTag({ id: 'category:4', label: 'Manga' }),
                 App.createTag({ id: 'category:8', label: 'Artist CG' }),
                 App.createTag({ id: 'category:16', label: 'Game CG' }),
+                App.createTag({ id: 'category:512', label: 'Western' }),
                 App.createTag({ id: 'category:256', label: 'Non-H' }),
                 App.createTag({ id: 'category:32', label: 'Image Set' }),
-                App.createTag({ id: 'category:512', label: 'Western' }),
                 App.createTag({ id: 'category:64', label: 'Cosplay' }),
                 App.createTag({ id: 'category:128', label: 'Asian Porn' }),
                 App.createTag({ id: 'category:1', label: 'Misc' })
@@ -116,7 +124,7 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         const section_latest_galleries = App.createHomeSection({ id: 'latest_galleries', title: 'Latest Galleries', type: HomeSectionType.singleRowNormal, containsMoreItems: true })
         const sections: HomeSection[] = [section_popular_recently, section_latest_galleries]
 
-        await parseHomeSections(this.cheerio, this.requestManager, sections, sectionCallback)
+        await parseHomeSections(this.cheerio, this.requestManager, sections, sectionCallback, this.stateManager)
     }
 
     async getViewMoreItems(homepageSectionId: string, metadata: any): Promise<PagedResults> {
@@ -130,7 +138,7 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         })
 
         let nextPageId = { id: 0 }
-        const results = await getSearchData('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId)
+        const results = await getSearchData('', page, 1023 - parseInt(homepageSectionId.substring(9)), this.requestManager, this.cheerio, nextPageId, this.stateManager)
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop()
             stopSearch = true
@@ -218,18 +226,43 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         const excludedCategories = query.excludedTags?.filter(tag => tag.id.startsWith('category:'))
         let categories = 0
         if (includedCategories != undefined && includedCategories.length != 0) {
-            categories = includedCategories.map(tag => parseInt(tag.id.substring(9))).reduce((prev, cur) => prev - cur, 1023)
+            let includedCategoriesNum = includedCategories.map(tag => parseInt(tag.id.substring(9)))
+            for (let includedCategoryNum of includedCategoriesNum) {
+                if (await isCategoryHidden(includedCategoryNum, this.stateManager)) {
+                    includedCategoriesNum.splice(includedCategoriesNum.indexOf(includedCategoryNum), 1)
+                }
+            }
+            categories = includedCategoriesNum.reduce((prev, cur) => prev - cur, 1023)
+            if (categories == 1023) {
+                categories = (await getDisplayedCategories(this.stateManager)).reduce((prev, cur) => prev - cur, 1023)
+            }
         }
         else if (excludedCategories != undefined && excludedCategories.length != 0) {
-            categories = excludedCategories.map(tag => parseInt(tag.id.substring(9))).reduce((prev, cur) => prev + cur, 0)
+            let excludedCategoriesNum = excludedCategories.map(tag => parseInt(tag.id.substring(9)))
+            for (let i: number = excludedCategoriesNum.length - 1; i >= 0; --i) {
+                let excludedCategoryNum: number = excludedCategoriesNum[i] ?? -1
+                if (excludedCategoryNum == -1) {
+                    continue
+                }
+                if (await isCategoryHidden(excludedCategoryNum, this.stateManager)) {
+                    excludedCategoriesNum.splice(excludedCategoriesNum.indexOf(excludedCategoryNum), 1)
+                }
+            }
+
+            let stateManagerHiddenCategories: number[] = await getDisplayedCategories(this.stateManager)
+            excludedCategoriesNum.push(stateManagerHiddenCategories.reduce((prev, cur) => prev - cur, 1023))
+            categories = excludedCategoriesNum.reduce((prev, cur) => prev + cur, 0)
+        }
+        else {
+            categories = (await getDisplayedCategories(this.stateManager)).reduce((prev, cur) => prev - cur, 1023)
         }
 
-        if (Number.isNaN(categories)) {
-            categories = 1023
+        if (Number.isNaN(categories) || categories == 1023) {
+            categories = 0
         }
 
         let nextPageId = { id: 0 }
-        const results = await getSearchData(query.title, page, categories, this.requestManager, this.cheerio, nextPageId)
+        const results = await getSearchData(query.title, page, categories, this.requestManager, this.cheerio, nextPageId, this.stateManager)
         if (results[results.length - 1]?.mangaId == 'stopSearch') {
             results.pop()
             stopSearch = true
@@ -242,5 +275,17 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
                 stopSearch: stopSearch
             }
         })
+    }
+
+    async getSourceMenu(): Promise<DUISection> {
+        return Promise.resolve(App.createDUISection({
+            id: 'main',
+            header: 'Source Settings',
+            rows: () => Promise.resolve([
+                settings(this.stateManager),
+                resetSettings(this.stateManager)
+            ]),
+            isHidden: false
+        }))
     }
 }

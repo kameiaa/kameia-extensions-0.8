@@ -1,9 +1,18 @@
 import {
     PartialSourceManga,
-    RequestManager
+    RequestManager,
+    SourceStateManager
 } from '@paperback/types'
 
-import { UrlInfo, parseMenuListPage, parseUrlParams } from './eHentaiParser'
+import {
+    parseMenuListPage,
+    parseUrlParams,
+    UrlInfo
+} from './eHentaiParser'
+
+import {
+    getExtraArgs, getDisplayedCategories
+} from './eHentaiSettings'
 
 export async function getGalleryData(ids: string[], requestManager: RequestManager): Promise<any> {
     const request = App.createRequest({
@@ -24,9 +33,11 @@ export async function getGalleryData(ids: string[], requestManager: RequestManag
     return json.gmetadata
 }
 
-export async function getSearchData(query: string | undefined, page: number, categories: number, requestManager: RequestManager, cheerio: CheerioAPI, nextPageId: { id: number }): Promise<PartialSourceManga[]> {
+export async function getSearchData(query: string | undefined, page: number, categories: number, requestManager: RequestManager, cheerio: CheerioAPI, nextPageId: { id: number }, sourceStateManager: SourceStateManager): Promise<PartialSourceManga[]> {
+    let finalQuery = (query ?? '') + ' ' + await getExtraArgs(sourceStateManager)
+
     const request = App.createRequest({
-        url: `https://e-hentai.org/?next=${page}&f_cats=${categories}&f_search=${encodeURIComponent(query ?? '')}`,
+        url: `https://e-hentai.org/?next=${page}&f_cats=${categories}&f_search=${encodeURIComponent(finalQuery)}`,
         method: 'GET'
     })
     const result = await requestManager.schedule(request, 1)
@@ -60,3 +71,70 @@ export function idCleaner(str: string | null): string {
     
     return `${splitUrlContents[4]}/${splitUrlContents[5]}`
 }
+
+export async function isCategoryHidden(category: number, sourceStateManager: SourceStateManager): Promise<boolean> {
+    const displayedCategories: number[] = await getDisplayedCategories(sourceStateManager)
+    return displayedCategories.filter((displayedCategory) => displayedCategory == category).length == 0
+}
+
+interface Category {
+    name: string;
+    value: string;
+}
+
+class eHentaiCategories {
+    Categories: Category[] = [
+        {
+            name: "Doujinshi",
+            value: '2'
+        },
+        {
+            name: "Manga",
+            value: '4'
+        },
+        {
+            name: "Artist CG",
+            value: '8'
+        },
+        {
+            name: "Game CG",
+            value: '16'
+        },
+        {
+            name: "Western",
+            value: '512'
+        },
+        {
+            name: "Non-H",
+            value: '256'
+        },
+        {
+            name: "Image Set",
+            value: '32'
+        },
+        {
+            name: "Cosplay",
+            value: '64'
+        },
+        {
+            name: "Asian Porn",
+            value: '128'
+        },
+        {
+            name: "Misc",
+            value: '1'
+        }
+    ]
+
+    getName(categoryValue: string): string {
+        return (
+            this.Categories.filter((category) => category.value == categoryValue)[0]?.name ?? ''
+        )
+    }
+
+    getValueList(): string[] {
+        return this.Categories.map((category) => category.value)
+    }
+}
+
+export const eHentaiCategoriesList = new eHentaiCategories()

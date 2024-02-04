@@ -1,9 +1,18 @@
 Bugs:
-- Random can't load one page
+✔ Random can't load one page
     Happens on random, logcat the error in app,
     investigate why random pages don't load and fail instantly
 
+    Investigation result:
+    Bad SSL certificate
+
+    Resolution:
+    Nothing can be done except for workaround using VPN (USA works)
+
 Features:
-- Persistent search arguments
+* Persistent search arguments
     Reference MangaDex/nhentai
     SourceStateManager
+
+    Get additional search args to work first ✔, then
+    DUISelect for toggling displayed categories, wil override the respective search category arg
