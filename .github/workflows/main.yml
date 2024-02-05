@@ -1,11 +1,11 @@
 on:
   push:
     branches:
-      - main
+      - 0.8
   pull_request:
       types: [closed]
       branches:
-          - main
+          - 0.8
 name: Bundle and Publish Sources
 jobs:
   build:
