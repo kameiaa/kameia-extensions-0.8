@@ -1,6 +1,6 @@
 {
   "name": "extensions-main",
-  "repositoryName": "kameia Extensions",
+  "repositoryName": "kameia Extensions (0.8)",
   "version": "0.8.0",
   "description": "Currently contains only e-hentai",
   "main": "index.js",
