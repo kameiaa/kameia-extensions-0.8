@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.4'),
+    version: (0, exports.getExportVersion)('0.0.5'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1665,18 +1665,8 @@ class eHentai {
     }
     async getCloudflareBypassRequestAsync() {
         return App.createRequest({
-            url: 'https://api.e-hentai.org/api.php',
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json'
-            },
-            data: {
-                'method': 'gdata',
-                "gidlist": [
-                    [2231376, "a7584a5932"]
-                ],
-                'namespace': 1
-            }
+            url: 'https://e-hentai.org/',
+            method: 'GET'
         });
     }
 }
