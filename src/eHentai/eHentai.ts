@@ -49,7 +49,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.3'),
+    version: getExportVersion('0.0.4'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -61,7 +61,7 @@ export const eHentaiInfo: SourceInfo = {
         text: '18+',
         type: BadgeColor.YELLOW
     }],
-    intents: SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.MANGA_CHAPTERS | SourceIntents.SETTINGS_UI
+    intents: SourceIntents.HOMEPAGE_SECTIONS | SourceIntents.MANGA_CHAPTERS | SourceIntents.SETTINGS_UI | SourceIntents.CLOUDFLARE_BYPASS_REQUIRED
 }
 
 export class eHentai implements SearchResultsProviding, MangaProviding, ChapterProviding, HomePageSectionsProviding {
@@ -289,5 +289,22 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
             ]),
             isHidden: false
         }))
+    }
+
+    async getCloudflareBypassRequestAsync(): Promise<Request> {
+        return App.createRequest({
+            url: 'https://api.e-hentai.org/api.php',
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            data: {
+                'method': 'gdata',
+                "gidlist": [
+                    [2231376,"a7584a5932"]
+                ],
+                'namespace': 1
+            }
+        })
     }
 }
