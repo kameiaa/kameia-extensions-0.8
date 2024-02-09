@@ -49,7 +49,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.4'),
+    version: getExportVersion('0.0.5'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -293,18 +293,8 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
 
     async getCloudflareBypassRequestAsync(): Promise<Request> {
         return App.createRequest({
-            url: 'https://api.e-hentai.org/api.php',
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json'
-            },
-            data: {
-                'method': 'gdata',
-                "gidlist": [
-                    [2231376,"a7584a5932"]
-                ],
-                'namespace': 1
-            }
+            url: 'https://e-hentai.org/',
+            method: 'GET'
         })
     }
 }
