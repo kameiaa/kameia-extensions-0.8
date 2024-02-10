@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.51'),
+    version: (0, exports.getExportVersion)('0.0.52'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
