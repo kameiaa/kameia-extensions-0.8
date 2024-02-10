@@ -1692,14 +1692,9 @@ async function getGalleryData(ids, requestManager) {
         }
     });
     const data = await requestManager.schedule(request, 1);
-    try {
-        const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data;
-        return json.gmetadata;
-    }
-    catch (e) {
-        console.log(e.message);
-        console.log(data);
-    }
+    console.log(data);
+    const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data;
+    return json.gmetadata;
 }
 exports.getGalleryData = getGalleryData;
 async function getSearchData(query, page, categories, requestManager, cheerio, nextPageId, sourceStateManager) {
