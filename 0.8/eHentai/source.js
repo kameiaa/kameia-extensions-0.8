@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.52'),
+    version: (0, exports.getExportVersion)('0.0.5'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1692,7 +1692,6 @@ async function getGalleryData(ids, requestManager) {
         }
     });
     const data = await requestManager.schedule(request, 1);
-    console.log(data);
     const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data;
     return json.gmetadata;
 }
