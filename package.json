@@ -1,8 +1,8 @@
 {
   "name": "extensions-main",
-  "repositoryName": "kameia Extensions (0.8)",
+  "repositoryName": "kameia Extensions (0.8) [Debug]",
   "version": "0.8.0",
-  "description": "Currently contains only e-hentai",
+  "description": "Debug extension for e-hentai",
   "main": "index.js",
   "scripts": {
     "test" : "npx paperback test",

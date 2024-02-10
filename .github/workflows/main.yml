@@ -1,11 +1,11 @@
 on:
   push:
     branches:
-      - "0.8-debug"
+      - 0.8
   pull_request:
       types: [closed]
       branches:
-          - "0.8-debug"
+          - 0.8
 name: Bundle and Publish Sources
 jobs:
   build:
@@ -19,20 +19,24 @@ jobs:
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v2
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
       - run: npm install
-      - run: npm run bundle -- --folder="0.8-debug"
+      - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
       - run: npx typedoc -out bundles/docs
         continue-on-error: true
 
       - name: Deploy
-        uses: s0/git-publish-subdir-action@master
-        env:
-          REPO: self
-          BRANCH: gh-pages
-          FOLDER: bundles
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: JamesIves/github-pages-deploy-action@4.1.0
+        with:
+            branch: gh-pages
+            folder: bundles
