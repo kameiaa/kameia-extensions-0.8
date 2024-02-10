@@ -29,14 +29,9 @@ export async function getGalleryData(ids: string[], requestManager: RequestManag
     })
 
     const data = await requestManager.schedule(request, 1)
-    try {
-        const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data
-        return json.gmetadata
-    }
-    catch(e) {
-        console.log((e as Error).message)
-        console.log(data)
-    }
+    console.log(data)
+    const json = (typeof data.data == 'string') ? JSON.parse(data.data.replaceAll(/[\r\n]+/g, ' ')) : data.data
+    return json.gmetadata
 }
 
 export async function getSearchData(query: string | undefined, page: number, categories: number, requestManager: RequestManager, cheerio: CheerioAPI, nextPageId: { id: number }, sourceStateManager: SourceStateManager): Promise<PartialSourceManga[]> {
