@@ -1,13 +1,11 @@
 on:
   push:
     branches:
-      - '**'
-      - '!main'
+      - '0.8-debug'
   pull_request:
       types: [closed]
       branches:
-          - '**'
-          - '!main'
+          - '0.8-debug'
 name: Bundle and Publish Sources
 jobs:
   build:
@@ -27,13 +25,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
       - run: npm install
-      - run: npm run bundle -- --folder=${{ steps.extract_branch.outputs.branch }}
+      - run: npm run bundle -- --folder='0.8-debug'
       - run: npx typedoc -out bundles/docs
         continue-on-error: true
 
