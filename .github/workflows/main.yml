@@ -19,7 +19,6 @@ jobs:
     steps:
       - name: Checkout Branch
         uses: actions/checkout@v4.1.2
-
       - name: Setup Node.js environment
         uses: actions/setup-node@v4.0.2
         with:
@@ -31,7 +30,9 @@ jobs:
         continue-on-error: true
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@4.1.0
-        with:
-            branch: gh-pages
-            folder: bundles
+        uses: s0/git-publish-subdir-action@master
+        env:
+          REPO: self
+          BRANCH: gh-pages
+          FOLDER: bundles
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
