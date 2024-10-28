@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.5'),
+    version: (0, exports.getExportVersion)('0.0.6'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1815,7 +1815,7 @@ const parseLanguage = (tags) => {
     if (languageTags.length == 0 || languageTags[0] == null) {
         return "unknown";
     }
-    return languageTags[0];
+    return languageTags.join(", ");
 };
 exports.parseLanguage = parseLanguage;
 async function getImage(url, requestManager, cheerio) {
@@ -1835,9 +1835,10 @@ async function parsePage(id, page, requestManager, cheerio) {
     const response = await requestManager.schedule(request, 1);
     const $ = cheerio.load(response.data);
     const pageArr = [];
-    const pageDivArr = $('div.gdtm').toArray();
+    const pageDivArr = $('#gdt.gt100 a').toArray();
+    console.log(pageDivArr.length);
     for (const pageDiv of pageDivArr) {
-        pageArr.push(getImage($('a', pageDiv).attr('href') ?? '', requestManager, cheerio));
+        pageArr.push(getImage($(pageDiv).attr('href') ?? '', requestManager, cheerio));
     }
     return Promise.all(pageArr);
 }
