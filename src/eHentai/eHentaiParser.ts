@@ -38,7 +38,7 @@ export const parseLanguage = (tags: string[]): string => {
         return "unknown";
     }
 
-    return languageTags[0]
+    return languageTags.join(", ")
 }
 
 async function getImage(url: string, requestManager: RequestManager, cheerio: CheerioAPI): Promise<string> {
@@ -63,10 +63,12 @@ export async function parsePage(id: string, page: number, requestManager: Reques
     const $ = cheerio.load(response.data as string)
 
     const pageArr = []
-    const pageDivArr = $('div.gdtm').toArray()
+    const pageDivArr = $('#gdt.gt100 a').toArray()
 
+    console.log(pageDivArr.length)
     for (const pageDiv of pageDivArr) {
-        pageArr.push(getImage($('a', pageDiv).attr('href') ?? '', requestManager, cheerio))
+        console.log($(pageDiv).attr('href'))
+        pageArr.push(getImage($(pageDiv).attr('href') ?? '', requestManager, cheerio))
     }
 
     return Promise.all(pageArr)
