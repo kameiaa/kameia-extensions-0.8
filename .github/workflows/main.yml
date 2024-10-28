@@ -26,6 +26,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - run: npm install
+      - run: mkdir '0.8'
       - run: npm run bundle -- --folder='0.8'
       - run: npx typedoc -out bundles/docs
         continue-on-error: true

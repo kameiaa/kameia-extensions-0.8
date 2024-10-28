@@ -67,7 +67,6 @@ export async function parsePage(id: string, page: number, requestManager: Reques
 
     console.log(pageDivArr.length)
     for (const pageDiv of pageDivArr) {
-        console.log($(pageDiv).attr('href'))
         pageArr.push(getImage($(pageDiv).attr('href') ?? '', requestManager, cheerio))
     }
 
