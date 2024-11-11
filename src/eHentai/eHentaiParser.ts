@@ -83,7 +83,7 @@ export async function parsePages(mangaId: string, pageCount: string, requestMana
 
         const pages: number = parseInt(splitPageCount[1] ?? '0')
         const imagesPerPage: number = parseInt(splitPageCount[2] ?? '0')
-        const loopAmt: number = pages / imagesPerPage
+        const loopAmt: number = Math.ceil(pages / imagesPerPage) - 1
         const pagesArr = []
         for (let i = 0; i <= loopAmt; i++) {
             pagesArr.push(parsePage(mangaId, i, requestManager, cheerio))
