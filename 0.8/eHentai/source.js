@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.8'),
+    version: (0, exports.getExportVersion)('0.0.9'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1866,7 +1866,7 @@ async function parsePages(mangaId, pageCount, requestManager, cheerio) {
         }
         const pages = parseInt(splitPageCount[1] ?? '0');
         const imagesPerPage = parseInt(splitPageCount[2] ?? '0');
-        const loopAmt = pages / imagesPerPage;
+        const loopAmt = Math.ceil(pages / imagesPerPage) - 1;
         const pagesArr = [];
         for (let i = 0; i <= loopAmt; i++) {
             pagesArr.push(parsePage(mangaId, i, requestManager, cheerio));
