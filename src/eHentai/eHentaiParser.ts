@@ -63,7 +63,7 @@ export async function parsePage(id: string, page: number, requestManager: Reques
     const $ = cheerio.load(response.data as string)
 
     const pageArr = []
-    const pageDivArr = $('#gdt.gt100 a').toArray()
+    const pageDivArr = $('#gdt a').toArray()
 
     console.log(pageDivArr.length)
     for (const pageDiv of pageDivArr) {
