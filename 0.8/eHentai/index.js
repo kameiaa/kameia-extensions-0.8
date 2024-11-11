@@ -1446,7 +1446,7 @@ const getExportVersion = (EXTENSION_VERSION) => {
 };
 exports.getExportVersion = getExportVersion;
 exports.eHentaiInfo = {
-    version: (0, exports.getExportVersion)('0.0.7'),
+    version: (0, exports.getExportVersion)('0.0.8'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -1557,12 +1557,27 @@ class eHentai {
         return App.createSourceManga({ id: mangaId, mangaInfo: mangaDetails });
     }
     async getChapters(mangaId) {
+        // For getting gallery metadata
         let data = (await (0, eHentaiHelper_1.getGalleryData)([mangaId], this.requestManager))[0];
         const chapters = [];
-        const chaptersLoopNum = Math.ceil(data.filecount / 40);
+        // Load page to get how much images there are per page
+        // Get the "Showing 1 - 20 of 42 images" text from the html
+        let $;
+        $ = await (0, eHentaiParser_1.getCheerioStatic)(this.cheerio, this.requestManager, 'https://e-hentai.org/g/' + mangaId);
+        const showing_text = $('p.gpc').text();
+        const match = showing_text.match(/Showing (\d+) - (\d+) of (\d+) images/);
+        if (!match) {
+            return chapters;
+        }
+        const maxPerPage = parseInt(match[2]);
+        const maxImages = parseInt(match[3]);
+        let chaptersLoopNum = 1;
+        if (maxImages != maxPerPage) {
+            chaptersLoopNum = Math.ceil(maxImages / maxPerPage);
+        }
         // Push entire gallery first, then split gallery
         chapters.push(App.createChapter({
-            id: 'Full-' + data.filecount,
+            id: 'Full-' + data.filecount + '-' + maxPerPage,
             name: 'Gallery (Warning - loading time grows with more pages)',
             chapNum: chaptersLoopNum + 1,
             time: new Date(parseInt(data.posted) * 1000),
@@ -1570,8 +1585,8 @@ class eHentai {
             sortingIndex: chaptersLoopNum
         }));
         for (let i = 0; i < chaptersLoopNum; ++i) {
-            let startPage = ((i * 40) + 1);
-            let endPage = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * 40);
+            let startPage = ((i * maxPerPage) + 1);
+            let endPage = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * maxPerPage);
             const websitePageNum = i;
             chapters.push(App.createChapter({
                 id: 'Pages-' + websitePageNum,
@@ -1794,7 +1809,7 @@ exports.eHentaiCategoriesList = new eHentaiCategories();
 },{"./eHentaiParser":72,"./eHentaiSettings":73}],72:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseUrlParams = exports.parseMenuListPage = exports.parseHomeSections = exports.parseTitle = exports.parseTags = exports.parsePages = exports.parsePage = exports.parseLanguage = exports.parseArtist = void 0;
+exports.parseUrlParams = exports.getCheerioStatic = exports.parseMenuListPage = exports.parseHomeSections = exports.parseTitle = exports.parseTags = exports.parsePages = exports.parsePage = exports.parseLanguage = exports.parseArtist = void 0;
 const entities = require("entities");
 const eHentaiHelper_1 = require("./eHentaiHelper");
 const eHentaiSettings_1 = require("./eHentaiSettings");
@@ -1846,12 +1861,14 @@ exports.parsePage = parsePage;
 async function parsePages(mangaId, pageCount, requestManager, cheerio) {
     const splitPageCount = pageCount.split('-');
     if ((splitPageCount[0] ?? '0') == 'Full') {
-        if (splitPageCount.length != 2) {
+        if (splitPageCount.length != 3) {
             return [];
         }
         const pages = parseInt(splitPageCount[1] ?? '0');
+        const imagesPerPage = parseInt(splitPageCount[2] ?? '0');
+        const loopAmt = pages / imagesPerPage;
         const pagesArr = [];
-        for (let i = 0; i <= pages / 40; i++) {
+        for (let i = 0; i <= loopAmt; i++) {
             pagesArr.push(parsePage(mangaId, i, requestManager, cheerio));
         }
         return Promise.all(pagesArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []));
@@ -1990,6 +2007,7 @@ async function getCheerioStatic(cheerio, requestManager, urlParam) {
     const response = await requestManager.schedule(request, 1);
     return cheerio.load(response.data);
 }
+exports.getCheerioStatic = getCheerioStatic;
 function parseUrlParams(url) {
     let ret = { id: 0, query: '', category: 0 };
     let trimmed = url.substring(22);
