@@ -29,6 +29,7 @@ import {
 } from './eHentaiHelper'
 
 import {
+    getCheerioStatic,
     parseArtist,
     parseHomeSections,
     parseLanguage,
@@ -49,7 +50,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.7'),
+    version: getExportVersion('0.0.8'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -173,13 +174,32 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
     }
 
     async getChapters(mangaId: string): Promise<Chapter[]> {
+        // For getting gallery metadata
         let data = (await getGalleryData([mangaId], this.requestManager))[0]
         const chapters: Chapter[] = []
-        const chaptersLoopNum: number = Math.ceil(data.filecount / 40)
+
+        // Load page to get how much images there are per page
+        // Get the "Showing 1 - 20 of 42 images" text from the html
+        let $: CheerioStatic
+        $ = await getCheerioStatic(this.cheerio, this.requestManager, 'https://e-hentai.org/g/' + mangaId)
+        const showing_text = $('p.gpc').text();
+        const match = showing_text.match(/Showing (\d+) - (\d+) of (\d+) images/);
+
+        if (!match) {
+            return chapters
+        }
+
+        const maxPerPage = parseInt(match[2] as string);
+        const maxImages = parseInt(match[3] as string);
+
+        let chaptersLoopNum: number = 1
+        if (maxImages != maxPerPage) {
+            chaptersLoopNum = Math.ceil(maxImages / maxPerPage)
+        }
 
         // Push entire gallery first, then split gallery
         chapters.push(App.createChapter({
-            id: 'Full-' + data.filecount,
+            id: 'Full-' + data.filecount + '-' + maxPerPage,
             name: 'Gallery (Warning - loading time grows with more pages)',
             chapNum: chaptersLoopNum + 1,
             time: new Date(parseInt(data.posted) * 1000),
@@ -188,8 +208,8 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         }))
 
         for (let i: number = 0; i < chaptersLoopNum; ++i) {
-            let startPage: number = ((i * 40) + 1)
-            let endPage: number = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * 40)
+            let startPage: number = ((i * maxPerPage) + 1)
+            let endPage: number = (i == chaptersLoopNum - 1 ? parseInt(data.filecount) : (i + 1) * maxPerPage)
             const websitePageNum: number = i
             chapters.push(App.createChapter({
                 id: 'Pages-' + websitePageNum,

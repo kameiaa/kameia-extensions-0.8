@@ -77,13 +77,15 @@ export async function parsePages(mangaId: string, pageCount: string, requestMana
     const splitPageCount: string[] = pageCount.split('-')
 
     if ((splitPageCount[0] ?? '0') == 'Full') {
-        if (splitPageCount.length != 2) {
+        if (splitPageCount.length != 3) {
             return []
         }
 
         const pages: number = parseInt(splitPageCount[1] ?? '0')
+        const imagesPerPage: number = parseInt(splitPageCount[2] ?? '0')
+        const loopAmt: number = pages / imagesPerPage
         const pagesArr = []
-        for (let i = 0; i <= pages / 40; i++) {
+        for (let i = 0; i <= loopAmt; i++) {
             pagesArr.push(parsePage(mangaId, i, requestManager, cheerio))
         }
         return Promise.all(pagesArr).then(pages => pages.reduce((prev, cur) => [...prev, ...cur], []))
@@ -201,7 +203,7 @@ export function parseMenuListPage($: CheerioStatic, ignoreExpectedEntryAmount: b
     return ret
 }
 
-async function getCheerioStatic(cheerio: CheerioAPI, requestManager: RequestManager, urlParam: string): Promise<CheerioStatic> {
+export async function getCheerioStatic(cheerio: CheerioAPI, requestManager: RequestManager, urlParam: string): Promise<CheerioStatic> {
     const request = App.createRequest({
         url: urlParam,
         method: 'GET'
