@@ -50,7 +50,7 @@ export const getExportVersion = (EXTENSION_VERSION: string): string => {
 }
 
 export const eHentaiInfo: SourceInfo = {
-    version: getExportVersion('0.0.9'),
+    version: getExportVersion('0.0.10'),
     name: 'e-hentai',
     icon: 'icon.png',
     author: 'kameia, loik',
@@ -183,14 +183,20 @@ export class eHentai implements SearchResultsProviding, MangaProviding, ChapterP
         let $: CheerioStatic
         $ = await getCheerioStatic(this.cheerio, this.requestManager, 'https://e-hentai.org/g/' + mangaId)
         const showing_text = $('p.gpc').text();
-        const match = showing_text.match(/Showing (\d+) - (\d+) of (\d+) images/);
-
-        if (!match) {
+        // https://regexr.com
+        const regexParse = /(\d[\d, ]*) - (\d[\d, ]*) of (\d[\d, ]*)/;
+        const match = showing_text.match(regexParse);
+        if (!match || match.length < 4) {
+            console.log("getChapters - No showing text match found with regex")
             return chapters
         }
 
-        const maxPerPage = parseInt(match[2] as string);
-        const maxImages = parseInt(match[3] as string);
+        const maxPerPageStr = match[2] as string;
+        const maxImagesStr = match[3] as string;
+
+        // Convert the extracted strings into integers by removing commas and spaces
+        const maxPerPage = parseInt(maxPerPageStr.replace(/[ ,]/g, ""), 10);
+        const maxImages = parseInt(maxImagesStr.replace(/[ ,]/g, ""), 10);
 
         let chaptersLoopNum: number = 1
         if (maxImages != maxPerPage) {
